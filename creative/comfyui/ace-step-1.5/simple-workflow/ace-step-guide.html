@@ -998,41 +998,225 @@
 
     <h3>lyrics（下段）— 歌詞＋構成</h3>
     <p>
-      <code>[Verse]</code> <code>[Chorus]</code> <code>[Bridge]</code> <code>[Outro]</code> のようなセクションタグを使って楽曲構成を指示します。
-      歌詞なしの場合はインストゥルメンタルが生成されます。
+      lyrics 欄は、単なる歌詞の入力欄ではありません。
+      <strong>「構成タグ」と「歌詞テキスト」を組み合わせて、曲の台本（脚本）を書く場所</strong>です。
+      tags が「全体の雰囲気設定」なら、lyrics は「シーンごとの演出指示書」にあたります。
     </p>
 
+    <!-- What are structure tags -->
+    <div class="card magenta">
+      <div class="card-title">🏷️ 構成タグ（Structure Tags）とは？</div>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        <code>[Verse]</code> や <code>[Chorus]</code> のように <strong>角括弧 [ ] で囲んだ</strong> 指示のことです。
+        これらはモデルに「今から曲のどのパートを演奏するのか」を教える<strong>目印</strong>の役割を持ちます。
+      </p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        音楽でいうと、バンドメンバーに「次はサビだよ！盛り上げて！」と声をかけるようなものです。
+        モデルはこのタグを読んで、<strong>そのセクションにふさわしいエネルギー・アレンジ・歌い方</strong>を自動的に判断します。
+      </p>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        例えば <code>[Verse]</code> ならおとなしく語りかけるように、
+        <code>[Chorus]</code> なら力強く盛り上がるように——タグ名だけで演奏のニュアンスが変わります。
+      </p>
+    </div>
+
+    <!-- Tag Reference Table -->
+    <div class="card cyan">
+      <div class="card-title">📋 使える主な構成タグ一覧</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>タグ</th><th>役割</th><th>どんな音になる？</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="color:var(--accent-cyan);" colspan="3"><strong>— 基本の構成タグ（ほぼ全ジャンル共通）—</strong></td></tr>
+          <tr><td>[Intro]</td><td>イントロ（前奏）</td><td>楽器だけで始まる導入部分。曲の雰囲気を提示する</td></tr>
+          <tr><td>[Verse]</td><td>Aメロ（歌い出し）</td><td>落ち着いたトーンで物語を進める。メインの歌パート</td></tr>
+          <tr><td>[Verse 1] [Verse 2]</td><td>番号付きAメロ</td><td>1番・2番と区別。歌詞を変えて繰り返す場合に使用</td></tr>
+          <tr><td>[Pre-Chorus]</td><td>Bメロ（サビ前の橋渡し）</td><td>サビに向けて緊張感が上がる。盛り上げの助走パート</td></tr>
+          <tr><td>[Chorus]</td><td>サビ</td><td>楽曲のハイライト。最もエネルギッシュで印象的な部分</td></tr>
+          <tr><td>[Final Chorus]</td><td>最後のサビ（大サビ）</td><td>通常のサビよりさらに力強い、クライマックス</td></tr>
+          <tr><td>[Bridge]</td><td>ブリッジ（Cメロ）</td><td>曲に変化を与える転換部。違うメロディや展開が入る</td></tr>
+          <tr><td>[Outro]</td><td>アウトロ（後奏）</td><td>曲の締めくくり。フェードアウトや余韻を演出</td></tr>
+          <tr><td>[Interlude]</td><td>間奏</td><td>歌のない楽器だけの演奏パート</td></tr>
+
+          <tr><td style="color:var(--accent-amber);" colspan="3"><strong>— ソロ・演奏系タグ —</strong></td></tr>
+          <tr><td>[Guitar Solo]</td><td>ギターソロ</td><td>ギターが主役の演奏セクション</td></tr>
+          <tr><td>[Piano Solo]</td><td>ピアノソロ</td><td>ピアノが主役の演奏セクション</td></tr>
+          <tr><td>[Violin Solo]</td><td>バイオリンソロ</td><td>バイオリンが主役の演奏セクション</td></tr>
+          <tr><td>[Instrumental]</td><td>インストゥルメンタル</td><td>歌なしの楽器演奏セクションを明示</td></tr>
+
+          <tr><td style="color:var(--accent-magenta);" colspan="3"><strong>— EDM・ダンスミュージック系タグ —</strong></td></tr>
+          <tr><td>[Build]</td><td>ビルドアップ</td><td>エネルギーが上昇していく高揚パート。ドロップの前兆</td></tr>
+          <tr><td>[Drop]</td><td>ドロップ</td><td>ビルドアップ後の爆発的な盛り上がり。EDMの核心部分</td></tr>
+          <tr><td>[Breakdown]</td><td>ブレイクダウン</td><td>ドロップ後に要素を減らして落ち着かせるセクション</td></tr>
+          <tr><td>[Break]</td><td>ブレイク</td><td>一瞬静かになる、もしくはリズムが変わる箇所</td></tr>
+
+          <tr><td style="color:var(--accent-green);" colspan="3"><strong>— ボーカル・リズム系タグ —</strong></td></tr>
+          <tr><td>[Hook]</td><td>フック</td><td>キャッチーな繰り返しフレーズ。サビとは別に印象を残す</td></tr>
+          <tr><td>[Refrain]</td><td>リフレイン</td><td>繰り返される短いフレーズやメロディ</td></tr>
+          <tr><td>[Ad-lib]</td><td>アドリブ</td><td>自由な掛け声やフェイク。「Yeah!」「Come on!」など</td></tr>
+          <tr><td>[Rap]</td><td>ラップパート</td><td>ラップ・スポークンワードのセクション</td></tr>
+          <tr><td>[Skit]</td><td>スキット</td><td>語り・セリフ・ナレーション的なパート</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;margin-bottom:0;color:var(--text-dim);font-size:12.5px">
+        ※ 上記は代表的なタグの一覧です。これ以外にも <strong>自由な英語名のタグ</strong> を作れます
+        （例: <code>[Climax]</code> <code>[Groove]</code> <code>[Transition]</code> など）。
+        モデルはタグ名の英語の意味から演奏スタイルを推測します。
+        また、楽器名を <code>[○○ Solo]</code> の形で自由に指定できます
+        （例: <code>[Saxophone Solo]</code> <code>[Drum Solo]</code>）。
+      </p>
+    </div>
+
+    <!-- Performance hints -->
+    <div class="card amber">
+      <div class="card-title">🎭 タグに「演出ヒント」を追加する</div>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        構成タグの後ろに <strong>ハイフン（ - ）で演出のヒントを付け加える</strong>ことができます。
+        これにより、「このセクションをどう演奏するか」をさらに具体的に指示できます。
+      </p>
+      <div style="background:var(--bg-primary);border-radius:10px;padding:16px 18px;font-size:13px;margin-bottom:14px">
+        <p style="margin-bottom:8px;color:var(--text-secondary)"><code style="color:var(--accent-magenta)">[Intro - piano]</code> → ピアノだけで静かに始まる</p>
+        <p style="margin-bottom:8px;color:var(--text-secondary)"><code style="color:var(--accent-magenta)">[Chorus - anthemic]</code> → アンセム風に壮大に盛り上がるサビ</p>
+        <p style="margin-bottom:8px;color:var(--text-secondary)"><code style="color:var(--accent-magenta)">[Bridge - whispered]</code> → ささやくように歌うブリッジ</p>
+        <p style="margin-bottom:8px;color:var(--text-secondary)"><code style="color:var(--accent-magenta)">[Verse - acoustic guitar, soft]</code> → アコギで優しく歌うAメロ</p>
+        <p style="margin-bottom:0;color:var(--text-secondary)"><code style="color:var(--accent-magenta)">[Outro - fade out]</code> → 徐々に消えていくアウトロ</p>
+      </div>
+      <div class="warning" style="margin-bottom:0">
+        <div class="warning-label">⚠ 演出ヒントは短く！</div>
+        <p style="margin:0">
+          <code>[Chorus - anthemic]</code> のように<strong>1〜2語にまとめる</strong>のがコツです。<br>
+          <span style="color:var(--accent-magenta)">✕ やりすぎ：</span><code>[Chorus - anthemic - stacked harmonies - high energy - powerful - epic]</code><br>
+          <span style="color:var(--accent-green)">○ 良い例：</span><code>[Chorus - anthemic]</code>（細かいスタイルは tags 欄に書く）
+        </p>
+      </div>
+    </div>
+
+    <!-- Writing Rules -->
+    <div class="card green">
+      <div class="card-title">✍️ 歌詞を書くときのルール＆コツ</div>
+
+      <p style="margin-bottom:6px"><strong style="color:var(--accent-green)">① 1行あたり6〜10音節が目安</strong></p>
+      <p style="margin-bottom:14px;color:var(--text-secondary);font-size:13.5px">
+        モデルは音節をビートに合わせて歌います。1行が長すぎたり短すぎたりすると、リズムが不自然になります。
+        同じセクション内では行ごとの文字数を揃えるのがポイントです（±1〜2文字の誤差はOK）。
+      </p>
+
+      <div style="background:var(--bg-primary);border-radius:10px;padding:14px 18px;font-size:13px;margin-bottom:16px">
+        <p style="margin-bottom:6px;color:var(--accent-magenta)">✕ 悪い例（1行が長すぎ＆短すぎの混在）：</p>
+        <p style="margin-bottom:10px;color:var(--text-dim)">私は窓の前に立って外の世界を見ている全てが変わっていく<br>こんにちは</p>
+        <p style="margin-bottom:6px;color:var(--accent-green)">○ 良い例（行ごとの文字数が揃っている）：</p>
+        <p style="margin-bottom:0;color:var(--text-secondary)">窓の前に立って（7文字）<br>外の世界見てる（7文字）<br>全てが変わってく（8文字）</p>
+      </div>
+
+      <p style="margin-bottom:6px"><strong style="color:var(--accent-green)">② 大文字＝強く歌う</strong></p>
+      <p style="margin-bottom:14px;color:var(--text-secondary);font-size:13.5px">
+        英語歌詞の場合、<strong>ALL CAPS（全て大文字）</strong>にすると、叫ぶ・力強く歌うニュアンスになります。
+        例：<code>THIS IS OUR MOMENT!</code>
+      </p>
+
+      <p style="margin-bottom:6px"><strong style="color:var(--accent-green)">③ 括弧 ( ) ＝バックコーラス</strong></p>
+      <p style="margin-bottom:14px;color:var(--text-secondary);font-size:13.5px">
+        丸括弧で囲んだ部分は、<strong>背景コーラスやハーモニー</strong>として処理されます。
+        例：<code>走り出せ (oh oh oh)</code> ただし効果は不安定な場合もあります。
+      </p>
+
+      <p style="margin-bottom:6px"><strong style="color:var(--accent-green)">④ tags と lyrics の矛盾を避ける</strong></p>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        tags で「classical, violin solo」と書いているのに、lyrics で <code>[Guitar Solo - electric - distorted]</code> と書くと、
+        モデルが混乱して品質が下がります。<strong>tags と lyrics は同じ世界観で統一</strong>してください。
+      </p>
+    </div>
+
+    <!-- Lyrics empty = instrumental -->
+    <div class="card" style="border-style:dashed;opacity:0.9">
+      <div class="card-title">🎹 歌詞なし＝インストゥルメンタル</div>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        lyrics 欄を<strong>空のままにする</strong>と、ボーカルなしのインストゥルメンタル曲が生成されます。
+        または、歌詞の代わりにセクションタグ＋楽器指示だけを書くことで、
+        各パートの楽器構成を指定したインスト曲を作ることもできます。
+      </p>
+    </div>
+
+    <!-- Example: Vocal song -->
+    <h3>lyrics の具体例</h3>
+
     <div class="prompt-box">
-      <span class="label lyrics">Lyrics — 例: J-Pop</span>
+      <span class="label lyrics">Lyrics — 例1: J-Pop（ボーカル曲）</span>
       <br>
-[Verse]<br>
+[Intro - piano]<br>
+<br>
+[Verse 1]<br>
 朝の光が差し込んで<br>
 新しい一日が始まる<br>
 昨日までの悩みなんて<br>
 風に乗せて飛ばそう<br>
 <br>
-[Chorus]<br>
+[Pre-Chorus]<br>
+まだ見ぬ景色が待ってる<br>
+一歩踏み出すだけでいい<br>
+<br>
+[Chorus - anthemic]<br>
 走り出せ　どこまでも<br>
 この空の下で<br>
 夢を追いかけて<br>
 笑顔で進もう<br>
 <br>
-[Bridge]<br>
+[Verse 2]<br>
+雨上がりの虹を見た<br>
+涙の後に見える光<br>
+立ち止まっていた時間が<br>
+動き出す合図だね<br>
+<br>
+[Bridge - whispered]<br>
 雨の日も晴れの日も<br>
 ずっと一緒にいよう<br>
 <br>
-[Outro]<br>
+[Final Chorus - anthemic]<br>
+走り出せ　どこまでも<br>
+この空の下で<br>
+夢を追いかけて<br>
+笑顔で進もう (oh oh oh)<br>
+<br>
+[Outro - fade out]<br>
 La la la la la...
     </div>
 
+    <div class="tip" style="margin-top:16px">
+      <div class="tip-label">💡 上の例のポイント解説</div>
+      <p style="margin:0;font-size:13px">
+        <code>[Intro - piano]</code> でピアノだけの前奏を指示 →
+        <code>[Verse 1]</code> で穏やかに歌い始め →
+        <code>[Pre-Chorus]</code> でサビに向けて盛り上げ →
+        <code>[Chorus - anthemic]</code> で壮大なサビ →
+        <code>[Verse 2]</code> で2番の歌詞に変化 →
+        <code>[Bridge - whispered]</code> でささやくように転換 →
+        <code>[Final Chorus]</code> で最も力強いサビ →
+        <code>[Outro - fade out]</code> で余韻を残して終わり。
+        各セクションの行数（文字数）が大体揃っている点にも注目してください。
+      </p>
+    </div>
+
+    <!-- Example: Instrumental -->
     <div class="prompt-box" style="margin-top:24px">
-      <span class="label lyrics">Lyrics — 例: インストゥルメンタル</span>
+      <span class="label lyrics">Lyrics — 例2: インストゥルメンタル（歌詞なし）</span>
       <br>
 [Intro - gentle piano + soft synth pads]<br>
 [Main Theme - Rhodes melody + light drums + bass groove]<br>
 [Build - layers adding, strings swelling]<br>
 [Climax - full arrangement, emotional peak]<br>
+[Break - minimal, piano only]<br>
+[Main Theme - reprise, full band]<br>
 [Outro - fading piano, ambient textures]
+    </div>
+
+    <div class="tip" style="margin-top:16px">
+      <div class="tip-label">💡 インスト曲のコツ</div>
+      <p style="margin:0;font-size:13px">
+        歌詞の代わりに、各セクションで<strong>どんな楽器が演奏するか</strong>を
+        演出ヒントとして書きます。モデルはこれを読んで、
+        セクションごとに適切な楽器編成とエネルギーレベルを判断します。
+      </p>
     </div>
 
     <h3>追加パラメータ（TextEncodeAceStepAudio1.5 ノード内）</h3>
