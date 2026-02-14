@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ComfyUI × ACE-Step 1.5 音楽生成ガイド</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-card-alt: #181824;
+    --accent-cyan: #00e5ff;
+    --accent-magenta: #ff006e;
+    --accent-amber: #ffbe0b;
+    --accent-green: #06d6a0;
+    --text-primary: #e8e8f0;
+    --text-secondary: #8888a0;
+    --text-dim: #555570;
+    --border-subtle: rgba(255,255,255,0.06);
+    --glow-cyan: 0 0 30px rgba(0,229,255,0.15);
+    --glow-magenta: 0 0 30px rgba(255,0,110,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 400;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(0,229,255,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(255,0,110,0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(255,190,11,0.02) 0%, transparent 40%);
+    z-index: -1;
+    animation: ambientDrift 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes ambientDrift {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-3%, -2%) rotate(2deg); }
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Header */
+  header {
+    padding: 80px 0 60px;
+    text-align: center;
+    position: relative;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,229,255,0.25);
+    padding: 6px 18px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    background: rgba(0,229,255,0.04);
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 900;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+  }
+
+  h1 .highlight-cyan { color: var(--accent-cyan); }
+  h1 .highlight-magenta { color: var(--accent-magenta); }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 300;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Sections */
+  section {
+    padding: 56px 0;
+    position: relative;
+  }
+
+  section + section {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 28px 0 14px;
+    color: var(--accent-amber);
+  }
+
+  p {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    font-size: 14.5px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 28px;
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--accent-cyan) 50%, transparent 100%);
+    opacity: 0.4;
+  }
+
+  .card.magenta::before {
+    background: linear-gradient(90deg, transparent 0%, var(--accent-magenta) 50%, transparent 100%);
+  }
+
+  .card.amber::before {
+    background: linear-gradient(90deg, transparent 0%, var(--accent-amber) 50%, transparent 100%);
+  }
+
+  .card.green::before {
+    background: linear-gradient(90deg, transparent 0%, var(--accent-green) 50%, transparent 100%);
+  }
+
+  .card-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    margin-bottom: 14px;
+  }
+
+  .card.magenta .card-title { color: var(--accent-magenta); }
+  .card.amber .card-title { color: var(--accent-amber); }
+  .card.green .card-title { color: var(--accent-green); }
+
+  /* Code blocks */
+  .code-block {
+    background: #0d0d15;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: var(--text-secondary);
+    margin: 16px 0;
+  }
+
+  .code-block .folder { color: var(--accent-amber); }
+  .code-block .file { color: var(--accent-green); }
+  .code-block .dim { color: var(--text-dim); }
+
+  /* Workflow Diagram */
+  .workflow-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 40px 24px;
+    margin: 28px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .workflow-diagram::before {
+    content: 'WORKFLOW DIAGRAM';
+    position: absolute;
+    top: 16px;
+    left: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+  }
+
+  .wf-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+
+  .wf-node {
+    background: var(--bg-card-alt);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 180px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .wf-node:hover {
+    transform: translateY(-2px);
+  }
+
+  .wf-node.cyan { border-color: rgba(0,229,255,0.35); box-shadow: var(--glow-cyan); }
+  .wf-node.magenta { border-color: rgba(255,0,110,0.35); box-shadow: var(--glow-magenta); }
+  .wf-node.amber { border-color: rgba(255,190,11,0.35); box-shadow: 0 0 30px rgba(255,190,11,0.1); }
+  .wf-node.green { border-color: rgba(6,214,160,0.35); box-shadow: 0 0 30px rgba(6,214,160,0.1); }
+
+  .wf-node-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .wf-node.cyan .wf-node-label { color: var(--accent-cyan); }
+  .wf-node.magenta .wf-node-label { color: var(--accent-magenta); }
+  .wf-node.amber .wf-node-label { color: var(--accent-amber); }
+  .wf-node.green .wf-node-label { color: var(--accent-green); }
+
+  .wf-node-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .wf-node-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .wf-arrow {
+    font-size: 22px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .wf-arrow-down {
+    text-align: center;
+    font-size: 22px;
+    color: var(--text-dim);
+    margin: 4px 0;
+  }
+
+  .wf-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    margin: 8px 0;
+  }
+
+  .wf-connector .line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--text-dim), transparent);
+    max-width: 80px;
+  }
+
+  /* Step list */
+  .step-list {
+    list-style: none;
+    counter-reset: steps;
+  }
+
+  .step-list li {
+    counter-increment: steps;
+    padding: 18px 18px 18px 60px;
+    position: relative;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    font-size: 14.5px;
+  }
+
+  .step-list li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 18px;
+    top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-list li strong {
+    color: var(--accent-amber);
+    font-weight: 600;
+  }
+
+  /* Tips */
+  .tip {
+    background: rgba(255,190,11,0.05);
+    border-left: 3px solid var(--accent-amber);
+    padding: 18px 22px;
+    border-radius: 0 10px 10px 0;
+    margin: 20px 0;
+    font-size: 13.5px;
+  }
+
+  .tip-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent-amber);
+    margin-bottom: 8px;
+  }
+
+  .warning {
+    background: rgba(255,0,110,0.05);
+    border-left: 3px solid var(--accent-magenta);
+    padding: 18px 22px;
+    border-radius: 0 10px 10px 0;
+    margin: 20px 0;
+    font-size: 13.5px;
+  }
+
+  .warning-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--accent-magenta);
+    margin-bottom: 8px;
+  }
+
+  /* Table */
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13.5px;
+  }
+
+  .param-table th {
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .param-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  .param-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent-green);
+    font-weight: 600;
+  }
+
+  /* Inline code */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: rgba(0,229,255,0.06);
+    border: 1px solid rgba(0,229,255,0.12);
+    padding: 2px 8px;
+    border-radius: 5px;
+    color: var(--accent-cyan);
+  }
+
+  /* Link */
+  a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(0,229,255,0.3);
+    transition: border-color 0.2s;
+  }
+
+  a:hover {
+    border-bottom-color: var(--accent-cyan);
+  }
+
+  /* Prompt examples */
+  .prompt-box {
+    background: #0d0d15;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 14px 0;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    position: relative;
+  }
+
+  .prompt-box .label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 2px 10px;
+    border-radius: 4px;
+  }
+
+  .prompt-box .label.tags {
+    background: var(--bg-primary);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,229,255,0.25);
+  }
+
+  .prompt-box .label.lyrics {
+    background: var(--bg-primary);
+    color: var(--accent-magenta);
+    border: 1px solid rgba(255,0,110,0.25);
+  }
+
+  /* Footer */
+  footer {
+    padding: 48px 0;
+    text-align: center;
+    border-top: 1px solid var(--border-subtle);
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .wf-row { flex-direction: column; }
+    .wf-arrow { transform: rotate(90deg); }
+    .wf-node { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="badge">Complete Guide — 2026.02</div>
+    <h1>
+      <span class="highlight-cyan">ComfyUI</span> × <span class="highlight-magenta">ACE-Step 1.5</span><br>
+      音楽生成ワークフロー ガイド
+    </h1>
+    <p class="subtitle">
+      オープンソース音楽生成AIをComfyUIで動かすための<br>
+      セットアップからワークフロー構築、プロンプトの書き方まで
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Section 0: Overview -->
+  <section>
+    <h2><span class="num">00</span>ACE-Step 1.5 とは</h2>
+    <p>
+      ACE-Step 1.5 は、ACE Studio と StepFun が共同開発したオープンソースの音楽生成AIモデルです。
+      言語モデル（LM）が楽曲の構成を計画し、拡散トランスフォーマー（DiT）が実際のオーディオを合成する
+      ハイブリッドアーキテクチャを採用しています。
+    </p>
+
+    <div class="card">
+      <div class="card-title">主な特徴</div>
+      <p style="margin-bottom:8px">⚡ <strong style="color:var(--accent-cyan)">超高速生成</strong> — RTX 3090 で10秒以内に1曲生成、RTX 5090 なら約1秒</p>
+      <p style="margin-bottom:8px">🎵 <strong style="color:var(--accent-cyan)">商用グレードの品質</strong> — Suno v4.5〜v5 の間の品質を達成（Musical Coherence スコア: 4.72）</p>
+      <p style="margin-bottom:8px">🌏 <strong style="color:var(--accent-cyan)">50以上の言語サポート</strong> — 日本語を含む主要10言語で特に高品質</p>
+      <p style="margin-bottom:8px">💾 <strong style="color:var(--accent-cyan)">低VRAM動作</strong> — 4GB VRAM で動作可能（8GB 推奨）</p>
+      <p style="margin-bottom:0">🎨 <strong style="color:var(--accent-cyan)">LoRA対応</strong> — 数曲から独自スタイルを学習可能</p>
+    </div>
+  </section>
+
+  <!-- Section 1: Requirements -->
+  <section>
+    <h2><span class="num">01</span>事前準備</h2>
+
+    <h3>① ComfyUI のインストール・更新</h3>
+    <p>
+      ACE-Step 1.5 は <strong>ComfyUI のネイティブノード</strong>として統合されています。
+      カスタムノードのインストールは不要ですが、<strong>最新版への更新が必須</strong>です。
+    </p>
+    <ul class="step-list">
+      <li><a href="https://www.comfy.org/download" target="_blank">comfy.org/download</a> から ComfyUI Desktop をダウンロード＆インストール（またはポータブル版を更新）</li>
+      <li>既にインストール済みの場合は、ComfyUI 内の <strong>Manager → Update ComfyUI</strong> で最新版に更新</li>
+      <li>更新後、ComfyUI を再起動</li>
+    </ul>
+
+    <div class="warning">
+      <div class="warning-label">⚠ 重要</div>
+      <p style="margin:0">ComfyUI が古いバージョンだと ACE-Step 関連のノードが表示されません。テンプレートが見つからない場合は更新を確認してください。</p>
+    </div>
+
+    <h3>② モデルファイルのダウンロード</h3>
+    <p>推奨は <strong>All-in-One（AIO）チェックポイント</strong>です。1ファイルで全コンポーネントが含まれます。</p>
+
+    <div class="card green">
+      <div class="card-title">ダウンロード先</div>
+      <p style="margin-bottom:8px"><strong>ファイル名:</strong> <code>ace_step_1.5_turbo_aio.safetensors</code></p>
+      <p style="margin-bottom:0">
+        <strong>URL:</strong>
+        <a href="https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/checkpoints/ace_step_1.5_turbo_aio.safetensors" target="_blank">
+          HuggingFace からダウンロード
+        </a>
+      </p>
+    </div>
+
+    <h3>③ モデルの配置</h3>
+    <p>ダウンロードしたファイルを以下のディレクトリに配置します：</p>
+    <div class="code-block">
+<span class="folder">📂 ComfyUI/</span>
+  <span class="dim">├──</span> <span class="folder">📂 models/</span>
+  <span class="dim">│   └──</span> <span class="folder">📂 checkpoints/</span>
+  <span class="dim">│       └──</span> <span class="file">ace_step_1.5_turbo_aio.safetensors</span>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">💡 ヒント</div>
+      <p style="margin:0">上級者向けに、Diffusion Model・Text Encoder（2つ）・VAE を個別にダウンロードする「Split版」もあります。通常はAIO版で十分です。</p>
+    </div>
+  </section>
+
+  <!-- Section 2: Workflow Diagram -->
+  <section>
+    <h2><span class="num">02</span>ワークフロー全体図</h2>
+    <p>
+      ACE-Step 1.5 の基本ワークフローは、わずか <strong>6つのノード</strong> で構成されるシンプルな構造です。
+      以下がノード同士の接続関係を示した図です。
+    </p>
+
+    <div class="workflow-diagram">
+
+      <!-- Row 1: Load Checkpoint -->
+      <div class="wf-row" style="margin-top:24px">
+        <div class="wf-node cyan" style="min-width:320px">
+          <div class="wf-node-label">Step 1 — モデル読込</div>
+          <div class="wf-node-name">チェックポイントを読み込む</div>
+          <div class="wf-node-desc">ace_step_1.5_turbo_aio.safetensors</div>
+          <div class="wf-node-desc">出力: モデル / CLIP / VAE</div>
+        </div>
+      </div>
+
+      <div class="wf-arrow-down">↓</div>
+
+      <!-- Row 2: Three parallel branches -->
+      <div class="wf-row">
+        <div class="wf-node amber" style="min-width:200px">
+          <div class="wf-node-label">サンプラー設定</div>
+          <div class="wf-node-name">モデルサンプリング<br>オーラフロー</div>
+          <div class="wf-node-desc">シフト: 3.00</div>
+        </div>
+
+        <div class="wf-node magenta" style="min-width:290px">
+          <div class="wf-node-label">Step 3 — プロンプト入力</div>
+          <div class="wf-node-name">TextEncodeAceStepAudio1.5</div>
+          <div class="wf-node-desc">tags（スタイル）＋ lyrics（歌詞）<br>
+          + bpm / language / keyscale<br>
+          + cfg_scale / temperature / top_p 等</div>
+        </div>
+      </div>
+
+      <div class="wf-connector"><span class="line"></span>両方の出力が KSampler へ<span class="line"></span></div>
+
+      <!-- Row 2.5: Duration primitives + Empty Latent -->
+      <div class="wf-row">
+        <div class="wf-node green" style="min-width:160px">
+          <div class="wf-node-label">Step 2 — 曲の長さ</div>
+          <div class="wf-node-name">Song Duration</div>
+          <div class="wf-node-desc">FLOAT: 120.0（秒）</div>
+        </div>
+        <div class="wf-arrow">→</div>
+        <div class="wf-node green" style="min-width:230px">
+          <div class="wf-node-label">空のLatent生成</div>
+          <div class="wf-node-name">Empty Ace Step 1.5<br>Latent Audio</div>
+          <div class="wf-node-desc">seconds / batch_size: 1</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div class="wf-node green" style="min-width:120px;padding:10px 14px">
+            <div class="wf-node-label">seed</div>
+            <div class="wf-node-desc">INT: 31</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-arrow-down">↓ <span style="font-size:11px;font-family:'JetBrains Mono';color:var(--text-dim)">MODEL + CONDITIONING + LATENT</span></div>
+
+      <!-- Row 3: KSampler -->
+      <div class="wf-row">
+        <div class="wf-node cyan" style="min-width:320px">
+          <div class="wf-node-label">サンプリング（生成の核心）</div>
+          <div class="wf-node-name">Kサンプラー</div>
+          <div class="wf-node-desc">ステップ: 8 / cfg: 1.0 / サンプラー: euler<br>スケジューラ: simple / ノイズ除去: 1.00</div>
+        </div>
+      </div>
+
+      <div class="wf-arrow-down">↓ <span style="font-size:11px;font-family:'JetBrains Mono';color:var(--text-dim)">LATENT → サンプル</span></div>
+
+      <!-- Row 4: VAE Decode + Save -->
+      <div class="wf-row">
+        <div class="wf-node green" style="min-width:200px">
+          <div class="wf-node-label">デコード</div>
+          <div class="wf-node-name">VAEデコード音声</div>
+          <div class="wf-node-desc">Latent → オーディオ波形</div>
+        </div>
+        <div class="wf-arrow">→</div>
+        <div class="wf-node magenta" style="min-width:220px">
+          <div class="wf-node-label">保存</div>
+          <div class="wf-node-name">オーディオ保存 (MP3)</div>
+          <div class="wf-node-desc">prefix: audio/ComfyUI<br>quality: V0</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="warning">
+      <div class="warning-label">⚠ 条件付けゼロアウトについて</div>
+      <p style="margin:0">テンプレートには <strong>条件付けゼロアウト</strong>（ConditioningZeroOut）ノードも含まれています。これは KSampler の <code>negative</code>（ネガティブ）入力に接続され、空のネガティブ条件を提供する役割です。テンプレートでは自動的に接続済みなので、特に操作は不要です。</p>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">💡 テンプレートから始めるのが最も簡単</div>
+      <p style="margin:0">
+        ComfyUI のメニューから <strong>Templates → Audio → ACE Step 1.5 Turbo AIO</strong> を選ぶと、
+        上記のワークフローがすべて構築済みの状態で読み込まれます。モデルが未ダウンロードの場合は
+        「Missing Models」ポップアップから自動ダウンロードも可能です。
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 2.5: Node Role Explanation for Beginners -->
+  <section>
+    <h2><span class="num">✦</span>各ノードの役割ガイド（初心者向け）</h2>
+    <p>
+      ワークフロー図を見ても「それぞれのノードが何をしているの？」と感じるかもしれません。
+      ここでは、<strong>音楽生成を「料理」に例えて</strong>、各ノードの役割をやさしく解説します。
+    </p>
+
+    <div class="card" style="background:linear-gradient(135deg, var(--bg-card) 0%, rgba(0,229,255,0.03) 100%)">
+      <div class="card-title">🍳 全体像 — 音楽生成を「料理」に例えると</div>
+      <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13.5px">
+        ComfyUI のワークフローは、<strong>「左から右へ」「上から下へ」</strong>とデータが流れる仕組みです。
+        料理に例えると、こんなイメージです：
+      </p>
+      <p style="margin-bottom:6px">📦 <strong>材料を準備する</strong>（モデル読込・プロンプト入力・Latent生成）</p>
+      <p style="margin-bottom:6px">🔥 <strong>調理する</strong>（Kサンプラーで音楽を生成）</p>
+      <p style="margin-bottom:0">🍽️ <strong>盛り付けて完成</strong>（VAEデコード → ファイル保存）</p>
+    </div>
+
+    <!-- Node 1 -->
+    <div class="card cyan">
+      <div class="card-title">① チェックポイントを読み込む（CheckpointLoaderSimple）</div>
+      <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:240px">
+          <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>冷蔵庫から食材セットを取り出す</p>
+          <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+            ACE-Step 1.5 の AI モデルファイル（.safetensors）を読み込むノードです。
+            これが音楽生成の<strong>すべての出発点</strong>になります。
+          </p>
+          <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+            1つのファイルから<strong>3つの部品</strong>を取り出して、後続のノードに渡します：
+          </p>
+        </div>
+        <div style="flex:0 0 auto;background:var(--bg-primary);border-radius:10px;padding:14px 18px;font-size:13px">
+          <p style="margin-bottom:6px"><strong style="color:var(--accent-cyan)">モデル</strong> → 音楽を生成する本体（調理器具）</p>
+          <p style="margin-bottom:6px"><strong style="color:var(--accent-cyan)">CLIP</strong> → テキストを理解する翻訳係</p>
+          <p style="margin-bottom:0"><strong style="color:var(--accent-cyan)">VAE</strong> → 仕上げに音声化する変換係</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Node 2 -->
+    <div class="card amber">
+      <div class="card-title">② モデルサンプリングオーラフロー（ModelSamplingAuraFlow）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>オーブンの温度と焼き方を設定する</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        ①で読み込んだ「モデル」に対して、<strong>拡散プロセスの動き方</strong>を調整するノードです。
+        具体的には <code>シフト</code> という値を設定します。
+      </p>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        この値は、楽曲の<strong>構成の一貫性</strong>（イントロ→サビ→アウトロの流れがまとまるか）に影響します。
+        デフォルトの <strong>3.00</strong> は Turbo モデルに最適化された値なので、最初はそのままでOKです。
+      </p>
+    </div>
+
+    <!-- Node 3 -->
+    <div class="card magenta">
+      <div class="card-title">③ TextEncodeAceStepAudio1.5（プロンプトエンコーダー）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>レシピ（注文書）を書いて厨房に渡す</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        このノードが<strong>一番重要で、一番触る場所</strong>です。
+        あなたが「どんな音楽を作りたいか」をAIに伝える役割を担います。
+      </p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        ①の「CLIP」（翻訳係）を使って、あなたが書いたテキストを
+        AIが理解できる数値データ（<strong>コンディショニング</strong>）に変換します。
+      </p>
+      <div style="background:var(--bg-primary);border-radius:10px;padding:16px 18px;font-size:13px;margin-top:8px">
+        <p style="margin-bottom:8px"><strong style="color:var(--accent-magenta)">上段 — tags</strong>：曲のスタイルを指定（ジャンル、楽器、ムード、テンポ感など）</p>
+        <p style="margin-bottom:8px"><strong style="color:var(--accent-magenta)">下段 — lyrics</strong>：歌詞と楽曲構成（[Verse] [Chorus] など）を指定</p>
+        <p style="margin-bottom:0;color:var(--text-dim);font-size:12px">加えて、bpm（テンポ）/ language（言語）/ keyscale（キー）などのパラメータでさらに細かく指示できます。</p>
+      </div>
+      <div class="tip" style="margin-top:16px;margin-bottom:0">
+        <div class="tip-label">💡 ここが「料理の味付け」のすべて</div>
+        <p style="margin:0;font-size:13px">同じモデル・同じ設定でも、ここに書く内容次第で、ジャズにもロックにもJ-POPにもなります。プロンプトの書き方はセクション05で詳しく解説しています。</p>
+      </div>
+    </div>
+
+    <!-- Node 4 group -->
+    <div class="card green">
+      <div class="card-title">④ Song Duration / seed / Empty Ace Step 1.5 Latent Audio</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>お皿のサイズを決めて、空のお皿を用意する</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        この3つは互いに連携して、生成する音楽の「器」を準備します。
+      </p>
+      <div style="background:var(--bg-primary);border-radius:10px;padding:16px 18px;font-size:13px">
+        <p style="margin-bottom:10px">
+          <strong style="color:var(--accent-green)">Song Duration</strong>（FLOAT）<br>
+          <span style="color:var(--text-secondary)">曲の長さを秒数で指定します。デフォルトは120秒（2分）です。この値は Latent Audio と TextEncode の両方に自動で伝わります。</span>
+        </p>
+        <p style="margin-bottom:10px">
+          <strong style="color:var(--accent-green)">seed</strong>（INT）<br>
+          <span style="color:var(--text-secondary)">ランダムシードです。<strong>同じプロンプト＋同じシードなら、同じ曲が再現</strong>されます。「いい曲ができた！」と思ったら seed の値をメモしておけば、後から同じ結果を再生成できます。違う曲を試したいときは値を変えてください。</span>
+        </p>
+        <p style="margin-bottom:0">
+          <strong style="color:var(--accent-green)">Empty Ace Step 1.5 Latent Audio</strong><br>
+          <span style="color:var(--text-secondary)">指定された秒数ぶんの「空の音声データ」を作ります。これは<strong>白いキャンバス</strong>のようなもので、Kサンプラーがここに音楽を「描いて」いきます。<code>batch_size</code> を増やすと一度に複数曲を同時生成できます。</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Node 5 -->
+    <div class="card cyan">
+      <div class="card-title">⑤ Kサンプラー（KSampler）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>実際に火を入れて調理する — ここが本番！</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        ワークフローの<strong>心臓部</strong>です。
+        ④で用意した「空のキャンバス」（ノイズ）から、③の「注文書」（コンディショニング）に従って、
+        ②で設定済みの「モデル」を使い、<strong>少しずつノイズを除去して音楽を形作っていく</strong>処理をします。
+      </p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        これは<strong>拡散モデル</strong>（Diffusion Model）の中核的な仕組みで、
+        画像生成AI（Stable Diffusion）と同じ原理です。ノイズだらけの状態から、
+        ステップを重ねるごとに「音楽らしさ」が浮かび上がってきます。
+      </p>
+      <div style="background:var(--bg-primary);border-radius:10px;padding:16px 18px;font-size:13px">
+        <p style="margin-bottom:6px"><strong style="color:var(--accent-cyan)">入力されるもの（4つ）：</strong></p>
+        <p style="margin-bottom:4px;color:var(--text-secondary)">・<strong>モデル</strong> ← ②から（調理器具）</p>
+        <p style="margin-bottom:4px;color:var(--text-secondary)">・<strong>ポジティブ</strong> ← ③の「条件付け」から（こんな曲にして！という指示）</p>
+        <p style="margin-bottom:4px;color:var(--text-secondary)">・<strong>ネガティブ</strong> ← 条件付けゼロアウトから（空の条件＝特に無し）</p>
+        <p style="margin-bottom:10px;color:var(--text-secondary)">・<strong>潜在画像</strong> ← ④の Empty Latent から（白いキャンバス）</p>
+        <p style="margin-bottom:0"><strong style="color:var(--accent-cyan)">出力：</strong>
+        <span style="color:var(--text-secondary)">音楽が「潜在表現」（人間には聴けないAI内部のデータ形式）として完成します。</span></p>
+      </div>
+    </div>
+
+    <!-- Node 6 -->
+    <div class="card green">
+      <div class="card-title">⑥ VAEデコード音声（VAEDecodeAudio）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>調理した料理をお皿に美しく盛り付ける</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        ⑤の Kサンプラーが生成した「潜在表現」は、まだ人間が聴けるオーディオ形式ではありません。
+        このノードが、①で読み込んだ <strong>VAE</strong>（変換係）を使って、
+        潜在データを<strong>実際に聴ける音声波形</strong>に変換（デコード）します。
+      </p>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        VAE は「Variational AutoEncoder」の略で、AIの内部表現と人間が扱えるデータとの間を橋渡しする仕組みです。
+        画像生成でも同じ概念が使われており、ComfyUI を使い続ける中で自然と馴染んでいくでしょう。
+      </p>
+    </div>
+
+    <!-- Node 7 -->
+    <div class="card magenta">
+      <div class="card-title">⑦ オーディオ保存（SaveAudio — MP3）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>完成した料理をテーブルに出す＆写真を撮る</p>
+      <p style="margin-bottom:10px;color:var(--text-secondary);font-size:13.5px">
+        ⑥でデコードされた音声をMP3ファイルとして保存するノードです。
+        ノード上の<strong>再生ボタン</strong>でその場で試聴することもできます。
+      </p>
+      <div style="background:var(--bg-primary);border-radius:10px;padding:14px 18px;font-size:13px">
+        <p style="margin-bottom:6px"><strong style="color:var(--accent-magenta)">filename_prefix</strong>：保存先のフォルダ名。デフォルトは <code>audio/ComfyUI</code></p>
+        <p style="margin-bottom:0"><strong style="color:var(--accent-magenta)">quality</strong>：MP3の品質。デフォルト <code>V0</code> は高品質設定です</p>
+      </div>
+      <p style="margin-top:10px;margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        ファイルは <code>ComfyUI/output/audio/</code> フォルダに保存されます。
+      </p>
+    </div>
+
+    <!-- Supplementary: ConditioningZeroOut -->
+    <div class="card" style="opacity:0.85;border-style:dashed">
+      <div class="card-title">（補助）条件付けゼロアウト（ConditioningZeroOut）</div>
+      <p style="margin-bottom:10px"><strong style="color:var(--accent-amber)">🍳 料理で例えると：</strong>「嫌いな食材リスト」に「特になし」と書く</p>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:13.5px">
+        Kサンプラーには「ポジティブ」（こうしてほしい）と「ネガティブ」（こうしないでほしい）の
+        2つの入力があります。ACE-Step では基本的にネガティブ指示は使わないため、
+        このノードが<strong>空っぽのネガティブ条件</strong>を自動的に作って Kサンプラーに渡しています。
+        テンプレートで自動接続済みなので、操作は不要です。
+      </p>
+    </div>
+
+    <!-- Summary diagram -->
+    <div class="card" style="background:linear-gradient(135deg, rgba(0,229,255,0.04) 0%, rgba(255,0,110,0.04) 100%)">
+      <div class="card-title">🔄 データの流れ — まとめ</div>
+      <p style="margin-bottom:0;color:var(--text-secondary);font-size:14px;line-height:2.2">
+        <strong style="color:var(--accent-cyan)">①</strong> モデルファイルを読み込む
+        → <strong style="color:var(--accent-amber)">②</strong> サンプリング方式を設定する
+        → <strong style="color:var(--accent-magenta)">③</strong> あなたのプロンプトをAIが理解できる形に変換する
+        → <strong style="color:var(--accent-green)">④</strong> 指定した秒数ぶんの空のキャンバスを用意する
+        → <strong style="color:var(--accent-cyan)">⑤</strong> AIがノイズから音楽を生成する（ここが本番！）
+        → <strong style="color:var(--accent-green)">⑥</strong> AI内部データを聴けるオーディオに変換する
+        → <strong style="color:var(--accent-magenta)">⑦</strong> MP3ファイルとして保存＆試聴！
+      </p>
+    </div>
+
+  </section>
+
+  <!-- Section 3: Node connections detail -->
+  <section>
+    <h2><span class="num">03</span>ノード接続の詳細</h2>
+    <p>各ノードの出力ポートと入力ポートの接続関係を整理します。</p>
+
+    <div class="card">
+      <div class="card-title">接続マップ（デフォルトテンプレート準拠）</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>出力元ノード</th><th>出力ポート</th><th>→ 入力先ノード</th><th>入力ポート</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>チェックポイントを読み込む</td><td>モデル</td><td>モデルサンプリングオーラフロー</td><td>モデル</td></tr>
+          <tr><td>チェックポイントを読み込む</td><td>CLIP</td><td>TextEncodeAceStepAudio1.5</td><td>clip</td></tr>
+          <tr><td>チェックポイントを読み込む</td><td>VAE</td><td>VAEデコード音声</td><td>vae</td></tr>
+          <tr><td>モデルサンプリングオーラフロー</td><td>モデル</td><td>Kサンプラー</td><td>モデル</td></tr>
+          <tr><td>TextEncodeAceStepAudio1.5</td><td>条件付け</td><td>Kサンプラー</td><td>ポジティブ</td></tr>
+          <tr><td>TextEncodeAceStepAudio1.5</td><td>条件付けゼロアウト</td><td>Kサンプラー</td><td>ネガティブ</td></tr>
+          <tr><td>Song Duration（FLOAT）</td><td>value</td><td>Empty Ace Step 1.5 Latent Audio</td><td>seconds</td></tr>
+          <tr><td>Song Duration（FLOAT）</td><td>value</td><td>TextEncodeAceStepAudio1.5</td><td>duration</td></tr>
+          <tr><td>seed（INT）</td><td>value</td><td>TextEncodeAceStepAudio1.5</td><td>seed</td></tr>
+          <tr><td>Empty Ace Step 1.5 Latent Audio</td><td>潜在</td><td>Kサンプラー</td><td>潜在画像</td></tr>
+          <tr><td>Kサンプラー</td><td>潜在</td><td>VAEデコード音声</td><td>サンプル</td></tr>
+          <tr><td>VAEデコード音声</td><td>オーディオ</td><td>オーディオ保存 (MP3)</td><td>audio</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">💡 Song Duration は2箇所に接続</div>
+      <p style="margin:0">Song Duration の値は、<strong>Empty Ace Step 1.5 Latent Audio</strong>（Latentの長さ）と <strong>TextEncodeAceStepAudio1.5</strong>（LMの計画範囲）の両方に接続されています。これにより生成音声の長さとLMの構成計画が同期します。</p>
+    </div>
+  </section>
+
+  <!-- Section 4: Step by step operation -->
+  <section>
+    <h2><span class="num">04</span>操作手順（ステップバイステップ）</h2>
+
+    <ul class="step-list">
+      <li>
+        <strong>ComfyUIを起動</strong>し、最新版であることを確認する。
+      </li>
+      <li>
+        <strong>テンプレートを読み込む：</strong>
+        メニューバー → <strong>Templates</strong> → カテゴリ「Audio」 → <strong>ACE Step 1.5 Turbo AIO</strong> を選択。
+        ワークフローが自動的にキャンバスに展開されます。
+      </li>
+      <li>
+        <strong>チェックポイントを読み込む</strong>ノードで、ドロップダウンから
+        <code>ace_step_1.5_turbo_aio.safetensors</code> が選択されていることを確認。
+      </li>
+      <li>
+        <strong>Song Duration</strong>（FLOATノード）で曲の長さを設定。
+        デフォルトは <code>120.0</code> 秒。初心者はそのままでOK。
+      </li>
+      <li>
+        <strong>TextEncodeAceStepAudio1.5</strong> ノードでプロンプトを入力（詳しくは次のセクション参照）。
+        上段に <strong>tags</strong>（スタイル記述）、下段に <strong>lyrics</strong>（歌詞）を入力。
+      </li>
+      <li>
+        その他のパラメータ（bpm / language / keyscale 等）を楽曲に合わせて調整する。
+        <strong>Kサンプラー</strong>のパラメータはデフォルトのまま（ステップ: 8 / cfg: 1.0 / euler / simple）で十分動作します。
+      </li>
+      <li>
+        <strong>Queue Prompt</strong>（Ctrl + Enter）を押して生成を実行！
+      </li>
+      <li>
+        生成完了後、<strong>オーディオ保存 (MP3)</strong> ノード上で再生ボタンを押して試聴。
+        音声ファイルは <code>ComfyUI/output/audio/</code> に保存されます。
+      </li>
+    </ul>
+  </section>
+
+  <!-- Section 5: Prompt Writing -->
+  <section>
+    <h2><span class="num">05</span>プロンプトの書き方</h2>
+    <p>
+      ACE-Step 1.5 では 2種類のプロンプト を使います。
+      <strong>TextEncodeAceStepAudio1.5</strong> ノードの2つの入力欄にそれぞれ入力します。
+    </p>
+
+    <h3>tags（上段）— スタイル・雰囲気の記述</h3>
+    <p>
+      ジャンル、楽器、ムード、テンポ、ボーカルスタイルなどをカンマ区切りで記述します。
+      自然言語での詳細な説明文も有効です。
+    </p>
+
+    <div class="prompt-box">
+      <span class="label tags">Tags — 例1: J-Pop</span>
+      <br>
+      j-pop, upbeat, female vocalist, sweet voice, synth pop, electronic, piano, bass, drums, cheerful, 128 bpm, major key, catchy melody, bright production
+    </div>
+
+    <div class="prompt-box" style="margin-top:24px">
+      <span class="label tags">Tags — 例2: Lo-Fi Chill</span>
+      <br>
+      lo-fi hip hop, chill, mellow, vinyl crackle, warm Rhodes piano, soft drums, jazzy chords, rainy day vibes, instrumental, relaxed, 85 bpm, cozy atmosphere
+    </div>
+
+    <h3>lyrics（下段）— 歌詞＋構成</h3>
+    <p>
+      <code>[Verse]</code> <code>[Chorus]</code> <code>[Bridge]</code> <code>[Outro]</code> のようなセクションタグを使って楽曲構成を指示します。
+      歌詞なしの場合はインストゥルメンタルが生成されます。
+    </p>
+
+    <div class="prompt-box">
+      <span class="label lyrics">Lyrics — 例: J-Pop</span>
+      <br>
+[Verse]<br>
+朝の光が差し込んで<br>
+新しい一日が始まる<br>
+昨日までの悩みなんて<br>
+風に乗せて飛ばそう<br>
+<br>
+[Chorus]<br>
+走り出せ　どこまでも<br>
+この空の下で<br>
+夢を追いかけて<br>
+笑顔で進もう<br>
+<br>
+[Bridge]<br>
+雨の日も晴れの日も<br>
+ずっと一緒にいよう<br>
+<br>
+[Outro]<br>
+La la la la la...
+    </div>
+
+    <div class="prompt-box" style="margin-top:24px">
+      <span class="label lyrics">Lyrics — 例: インストゥルメンタル</span>
+      <br>
+[Intro - gentle piano + soft synth pads]<br>
+[Main Theme - Rhodes melody + light drums + bass groove]<br>
+[Build - layers adding, strings swelling]<br>
+[Climax - full arrangement, emotional peak]<br>
+[Outro - fading piano, ambient textures]
+    </div>
+
+    <h3>追加パラメータ（TextEncodeAceStepAudio1.5 ノード内）</h3>
+    <p>このノードには音楽の属性を制御する基本パラメータと、LM（言語モデル）の動作を制御する詳細パラメータがあります。</p>
+
+    <div class="card green">
+      <div class="card-title">音楽制御パラメータ</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>パラメータ</th><th>デフォルト値</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>bpm</td><td>190</td><td>テンポ（beats per minute）。ジャンルに合わせて調整</td></tr>
+          <tr><td>language</td><td>en</td><td>歌詞の言語。日本語は <code>ja</code></td></tr>
+          <tr><td>keyscale</td><td>E minor</td><td>楽曲のキー。例: <code>C major</code> / <code>A minor</code></td></tr>
+          <tr><td>timesignature</td><td>4</td><td>拍子（4 = 4/4拍子）</td></tr>
+          <tr><td>duration</td><td>（Song Durationから自動接続）</td><td>曲の長さ（秒）</td></tr>
+          <tr><td>seed</td><td>（seedノードから自動接続）</td><td>生成のランダムシード</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card amber">
+      <div class="card-title">LM（言語モデル）制御パラメータ</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>パラメータ</th><th>デフォルト値</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>generate_audio_codes</td><td>true</td><td>Chain-of-Thought 推論を有効化。true推奨</td></tr>
+          <tr><td>cfg_scale</td><td>2.0</td><td>LM側のプロンプト追従度</td></tr>
+          <tr><td>temperature</td><td>0.85</td><td>生成の多様性。高いほど変化に富む</td></tr>
+          <tr><td>top_p</td><td>0.90</td><td>核サンプリングの閾値</td></tr>
+          <tr><td>top_k</td><td>0</td><td>上位kトークンに制限（0=無制限）</td></tr>
+          <tr><td>min_p</td><td>0.000</td><td>最小確率フィルタ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">💡 LMパラメータは基本デフォルトでOK</div>
+      <p style="margin:0">cfg_scale / temperature / top_p 等のLMパラメータは、デフォルト値で十分良い結果が得られます。まずはデフォルトのまま使い、慣れてから微調整してみてください。</p>
+    </div>
+  </section>
+
+  <!-- Section 6: KSampler Settings -->
+  <section>
+    <h2><span class="num">06</span>Kサンプラー＆サンプラー設定（デフォルト値）</h2>
+    <p>テンプレートではTurboモデルに最適化されたデフォルト値が設定されています。まずはこのまま使うことを推奨します。</p>
+
+    <div class="card cyan">
+      <div class="card-title">Kサンプラー — デフォルト設定</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>パラメータ</th><th>デフォルト値</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ステップ</td><td>8</td><td>Turbo モデルのため少ないステップで高速生成</td></tr>
+          <tr><td>cfg</td><td>1.0</td><td>プロンプト追従度。Turbo では低めが適正</td></tr>
+          <tr><td>サンプラー名</td><td>euler</td><td>高速かつ安定したサンプラー</td></tr>
+          <tr><td>スケジューラ</td><td>simple</td><td>シンプルなスケジューリング</td></tr>
+          <tr><td>ノイズ除去</td><td>1.00</td><td>新規生成時は常に1.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card amber">
+      <div class="card-title">モデルサンプリングオーラフロー — デフォルト設定</div>
+      <table class="param-table">
+        <thead>
+          <tr><th>パラメータ</th><th>デフォルト値</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>シフト</td><td>3.00</td><td>楽曲構成の品質に影響</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card magenta">
+      <div class="card-title">上級者向け — カスタム設定例（品質重視）</div>
+      <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px">デフォルトで満足できない場合に試す、コミュニティで評価の高い設定です。生成時間は長くなります。</p>
+      <table class="param-table">
+        <thead>
+          <tr><th>パラメータ</th><th>カスタム値</th><th>備考</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>ステップ</td><td>50〜65</td><td>品質向上。65が安定の上限</td></tr>
+          <tr><td>cfg</td><td>4.0</td><td>プロンプトへの追従性が上がる</td></tr>
+          <tr><td>サンプラー名</td><td>er_sde</td><td>音楽に適した代替サンプラー</td></tr>
+          <tr><td>スケジューラ</td><td>linear_quadratic</td><td>より安定したスケジューリング</td></tr>
+          <tr><td>シフト</td><td>6.0</td><td>構成の一貫性が向上</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">💡 バッチ生成を活用しよう</div>
+      <p style="margin:0">
+        ACE-Step はシード値による結果のバラつきが大きいモデルです（ガチャ的な性質）。
+        <strong>EmptyAceStepLatentAudio</strong> の <code>batch_size</code> を <strong>4〜8</strong> に設定して
+        複数同時生成し、ベストなものを選ぶ「チェリーピック」が推奨されています。
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 7: Quick Reference -->
+  <section>
+    <h2><span class="num">07</span>クイックリファレンス</h2>
+
+    <div class="card magenta">
+      <div class="card-title">最速で始める手順まとめ</div>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">1.</strong> ComfyUI を最新版に更新</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">2.</strong> Templates → Audio → ACE Step 1.5 Turbo AIO を選択</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">3.</strong> tags にスタイル（ジャンル、楽器、ムード等）を入力</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">4.</strong> lyrics に歌詞を入力（インスト曲なら空欄 or 構成タグのみ）</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">5.</strong> Song Duration を確認（デフォルト: 120秒）</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">6.</strong> bpm / language / keyscale を楽曲に合わせて調整</p>
+      <p style="margin-bottom:8px"><strong style="color:var(--text-primary)">7.</strong> Ctrl + Enter で生成！</p>
+      <p style="margin-bottom:0"><strong style="color:var(--text-primary)">8.</strong> オーディオ保存 (MP3) ノードで試聴・保存</p>
+    </div>
+
+    <div class="card green">
+      <div class="card-title">便利なリンク集</div>
+      <p style="margin-bottom:8px">📖 <a href="https://docs.comfy.org/tutorials/audio/ace-step/ace-step-v1-5" target="_blank">ComfyUI 公式ドキュメント — ACE-Step 1.5</a></p>
+      <p style="margin-bottom:8px">🎵 <a href="https://ace-step.github.io/ace-step-v1.5.github.io/" target="_blank">ACE-Step 1.5 公式プロジェクトページ（デモ・サンプル）</a></p>
+      <p style="margin-bottom:8px">🤗 <a href="https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files" target="_blank">HuggingFace — モデルファイル一覧</a></p>
+      <p style="margin-bottom:8px">📝 <a href="https://blog.comfy.org/p/ace-step-15-is-now-available-in-comfyui" target="_blank">Comfy.org 公式ブログ記事</a></p>
+      <p style="margin-bottom:0">💻 <a href="https://github.com/ace-step/ACE-Step-1.5" target="_blank">ACE-Step 1.5 GitHub リポジトリ</a></p>
+    </div>
+  </section>
+
+  <!-- Section 8: Tips -->
+  <section>
+    <h2><span class="num">08</span>うまく使うためのコツ</h2>
+
+    <div class="tip">
+      <div class="tip-label">🎲 ガチャを楽しむ心構え</div>
+      <p style="margin:0">
+        ACE-Step はシード値やdurationに対して結果が大きく変動します。
+        完璧な1曲を1回で生成しようとせず、複数回生成してベストを選ぶのが正しい使い方です。
+        公式開発者も「ワンクリック生成ではなく、人間中心の生成」と述べています。
+      </p>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">⏱ duration の選び方</div>
+      <p style="margin:0">
+        短すぎると曲として成立しづらく、長すぎると品質にバラつきが出ます。
+        まずは <strong>90〜120秒</strong> で試し、慣れてきたら 180秒（3分）に挑戦するのがおすすめです。
+      </p>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">🎤 ボーカル音量の調整</div>
+      <p style="margin:0">
+        ワークフローに <strong>LatentOperationTonemapReinhard</strong> ノードを追加し、
+        <code>multiplier</code> の値を調整するとボーカルの存在感を変えられます。
+        1.15 前後がバランスの良い値です。値を大きくするとボーカルが目立ちます。
+      </p>
+    </div>
+
+    <div class="tip">
+      <div class="tip-label">📝 歌詞の小さなズレは気にしない</div>
+      <p style="margin:0">
+        モデルが歌詞の一部を飛ばしたり、少し変えて歌うことがあります。
+        全体の雰囲気とエネルギーが良ければ「ハッピーアクシデント」として受け入れるのがコツです。
+        完璧な歌詞再現を追求すると、かえって時間を浪費してしまいます。
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    ComfyUI × ACE-Step 1.5 Guide — Created with Claude
+  </div>
+</footer>
+
+</body>
+</html>
