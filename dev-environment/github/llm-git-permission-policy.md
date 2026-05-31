@@ -161,3 +161,27 @@ Hiroaki のリポジトリ（iron bead の記録、tech-learning-log、FrameWeav
 - 許可リストだけに頼らず、リモート側の **ブランチ保護**（`main` への直 push 禁止、force-push 禁止）も別レイヤーで張っておくと、設定がどうであれ最後の砦になる。「LLMに何をタイプさせるか」と「その認証情報がどこまで触れるか」は分けて考える。
 
 > Claude Code などのツールでは、この区分けをそのまま「許可するコマンド／確認を求めるコマンド」の設定に落とし込める。
+
+---
+
+## 6. Claude Code への落とし込み（allow / ask / deny）
+
+§1〜5 の3段階は「**回復可能性**」で切った分類で、行動は実質「**任せる／確認を挟む**」の2つ。一方 Claude Code の権限は **allow（自動実行）/ ask（都度確認）/ deny（完全禁止）** の3つで、軸が違う。3段階を 1:1:1 で allow/ask/deny に当てると **`deny` を取り違える**ので注意する。
+
+- `deny` は「③段階」ではなく、**「私の承認があってもやらせない（確認すら出さない）」絶対禁止**という別概念。
+- 判定基準：「**承認付きでも agent にやらせたい場面が一度でもあるか？** No → `deny` / Yes-but-careful → `ask`」。
+- Claude Code の**デフォルトは未許可コマンドを毎回 ask** する。だから実利は **allow（手間を減らす）と deny（絶対の歯止め）の両端**にあり、`ask` は主に「将来 allow を広げた時の保険」。
+
+### この方針での分類（一人運用・`main` 直コミット前提）
+
+| レベル | コマンド | 根拠 |
+|--------|---------|------|
+| **allow** | `git status/log/diff/show`、`git add/commit/stash/branch/switch`、`gh issue list/view/status`、`gh pr list/view`、`gh label list` | ①読み取り・戻せる操作。`commit` は履歴に残り戻せるので自動でよい |
+| **ask** | `git push`、`git rebase`、`git reset --hard`、`git clean -f`、`git checkout --`、`git restore`、`gh issue create/comment/edit/close/reopen/lock`、`gh pr create` | ②手元破壊＋③共有影響のうち**承認すれば実行してよい**もの。未保存ファイル破壊もここ（自分で捨てたい時のため）。Issue 作成系は「下書き→承認」の砦 |
+| **deny** | `gh issue delete/transfer`、`git push --force/-f/--force-with-lease`、`git push origin --delete` | **承認付きでもやらせない**。Issue 削除は別ルール（dev-workflow.md の「Issueは削除せずクローズ」）と一致。force-push・共有ブランチ削除は共有履歴の破壊 |
+
+### 注意（落とし穴）
+
+- **`rm` をパターン deny しない**。`Bash(rm*)` は全 `rm` を止めて過剰、かつ `/bin/rm`・`find -delete`・python 等で抜ける。ローカルファイル削除の robust な守りは **sandbox の書込み制限（作業ディレクトリ限定）＋こまめなコミット**。
+- **deny の引数縛りは tripwire であって壁ではない**（`--force` と `-f` は別文字列、変数経由で抜ける）。push 系の真の壁は **GitHub のブランチ保護**、ファイル消失の守りは **こまめなコミット＋sandbox**。
+- **ガチガチにしない**。この分類は個人・チームの方針で変わる。一人運用なら緩め、公開・複数人になったら ask/deny を締める二段構えが現実的。
